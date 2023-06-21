@@ -1,33 +1,30 @@
-#!groovy
+properties([
+    [$class: 'BuildDiscarderProperty',
+        strategy: [$class: 'LogRotator', numToKeepStr: '10']]
+])
 
-/* Only keep the 10 most recent builds. */
-properties([[$class: 'BuildDiscarderProperty',
-                strategy: [$class: 'LogRotator', numToKeepStr: '10']]])
+node('docker-node') {
+    stage('Build') {
+        // Checkout
+        checkout scm
 
-stage ('Build') {
+        // Install required bundles
+        sh 'bundle install'
 
-  node {
-    // Checkout
-    checkout scm
+        // Build and run tests with coverage
+        sh 'bundle exec rake build spec'
 
-    // install required bundles
-    sh 'bundle install'
+        // Archive the built artifacts
+        archive(includes: 'pkg/*.gem')
 
-    // build and run tests with coverage
-    sh 'bundle exec rake build spec'
-
-    // Archive the built artifacts
-    archive (includes: 'pkg/*.gem')
-
-    // publish html
-    publishHTML ([
-        allowMissing: false,
-        alwaysLinkToLastBuild: false,
-        keepAll: true,
-        reportDir: 'coverage',
-        reportFiles: 'index.html',
-        reportName: "RCov Report"
-      ])
-
-  }
+        // Publish HTML
+        publishHTML([
+            allowMissing: false,
+            alwaysLinkToLastBuild: false,
+            keepAll: true,
+            reportDir: 'coverage',
+            reportFiles: 'index.html',
+            reportName: 'RCov Report'
+        ])
+    }
 }
